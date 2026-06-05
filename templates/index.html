@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WiFi Active Users</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header h1 span { color: #60a5fa; }
+
+    .meta {
+      font-size: 0.78rem;
+      color: #64748b;
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .meta b { color: #94a3b8; }
+
+    .stats {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: #1e2433;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 20px 24px;
+      text-align: center;
+    }
+
+    .stat-card .number {
+      font-size: 2.8rem;
+      font-weight: 800;
+      color: #60a5fa;
+      line-height: 1;
+    }
+
+    .stat-card .number.mobile-num { color: #34d399; }
+
+    .stat-card .label {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .toolbar {
+      max-width: 1200px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button#scan-btn {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button#scan-btn:hover { background: #2563eb; }
+    button#scan-btn:disabled { background: #334155; cursor: not-allowed; color: #64748b; }
+
+    #status-text {
+      font-size: 0.82rem;
+      color: #64748b;
+    }
+
+    #status-text.scanning { color: #f59e0b; }
+    #status-text.error    { color: #f87171; }
+
+    .search-box { margin-left: auto; }
+
+    .search-box input {
+      background: #1e2433;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 8px 14px;
+      color: #e2e8f0;
+      font-size: 0.88rem;
+      width: 220px;
+      outline: none;
+    }
+
+    .search-box input:focus { border-color: #3b82f6; }
+
+    .table-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #1e2433;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    thead th {
+      background: #161b27;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      border-bottom: 1px solid #2d3748;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #1a2030;
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #232c3d; }
+
+    tbody td {
+      padding: 12px 16px;
+      vertical-align: middle;
+    }
+
+    .badge-mac {
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      background: #172554;
+      color: #93c5fd;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.82rem;
+    }
+
+    .badge-ip {
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      color: #a78bfa;
+    }
+
+    .vendor-tag {
+      background: #1c2a1c;
+      color: #86efac;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 0.78rem;
+    }
+
+    /* Device type badges */
+    .type-badge {
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .type-Mobile   { background: #064e3b; color: #34d399; }
+    .type-Computer { background: #1e3a5f; color: #60a5fa; }
+    .type-Router   { background: #3b2400; color: #fb923c; }
+    .type-Printer  { background: #2d1b4e; color: #c084fc; }
+    .type-Media    { background: #3b1a1a; color: #f87171; }
+    .type-Camera   { background: #1a2e1a; color: #86efac; }
+
+    /* OS badges */
+    .os-badge {
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .os-iOS            { background: #1c2a3a; color: #7dd3fc; }
+    .os-Android        { background: #1c2a1c; color: #86efac; }
+    .os-Windows        { background: #1e2a3e; color: #93c5fd; }
+    .os-macOS          { background: #2a1c1c; color: #fca5a5; }
+    .os-Linux          { background: #2a2a1c; color: #fde68a; }
+    .os-BSD            { background: #2a1c2a; color: #e9d5ff; }
+    .os-WindowsMobile  { background: #1c2a3a; color: #67e8f9; }
+
+    #empty-row td {
+      text-align: center;
+      color: #475569;
+      padding: 48px;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1><span>WiFi</span> Active Users</h1>
+  <div class="meta">
+    <span>Your IP: <b id="local-ip">{{ local_ip }}</b></span>
+    <span>Subnet: <b id="subnet-text">{{ subnet }}</b></span>
+    <span>Last scan: <b id="last-scan">—</b></span>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat-card">
+    <div class="number" id="device-count">—</div>
+    <div class="label">Active Devices</div>
+  </div>
+  <div class="stat-card">
+    <div class="number mobile-num" id="mobile-count">—</div>
+    <div class="label">Mobile Devices</div>
+  </div>
+  <div class="stat-card">
+    <div class="number" id="vendor-count">—</div>
+    <div class="label">Unique Vendors</div>
+  </div>
+  <div class="stat-card">
+    <div class="number" id="refresh-in">30</div>
+    <div class="label">Seconds to Refresh</div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button id="scan-btn" onclick="triggerScan()">&#9654; Scan Now</button>
+  <span id="status-text">Loading…</span>
+  <div class="search-box">
+    <input type="text" id="search" placeholder="Filter by IP, MAC, vendor, OS…" oninput="filterTable()"/>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>IP Address</th>
+        <th>MAC Address</th>
+        <th>Vendor</th>
+        <th>Type</th>
+        <th>OS</th>
+        <th>Hostname</th>
+      </tr>
+    </thead>
+    <tbody id="device-tbody">
+      <tr id="empty-row"><td colspan="7">Scanning your network…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  let allDevices = [];
+  let countdown = 30;
+  let countdownTimer = null;
+
+  const TYPE_CLASSES = {
+    Mobile: 'type-Mobile', Computer: 'type-Computer', Router: 'type-Router',
+    Printer: 'type-Printer', Media: 'type-Media', Camera: 'type-Camera',
+  };
+
+  const OS_CLASSES = {
+    iOS: 'os-iOS', Android: 'os-Android', Windows: 'os-Windows',
+    macOS: 'os-macOS', Linux: 'os-Linux', BSD: 'os-BSD',
+    'Windows Mobile': 'os-WindowsMobile',
+  };
+
+  function typeBadge(type) {
+    if (!type) return '<span style="color:#475569">—</span>';
+    const cls = TYPE_CLASSES[type] || '';
+    return `<span class="type-badge ${cls}">${type}</span>`;
+  }
+
+  function osBadge(os) {
+    if (!os) return '<span style="color:#475569">—</span>';
+    const cls = OS_CLASSES[os] || '';
+    return `<span class="os-badge ${cls}">${os}</span>`;
+  }
+
+  function formatTime(ts) {
+    if (!ts) return '—';
+    return new Date(ts * 1000).toLocaleTimeString();
+  }
+
+  function renderTable(devices) {
+    const tbody = document.getElementById('device-tbody');
+    const filter = document.getElementById('search').value.toLowerCase();
+    const filtered = devices.filter(d =>
+      d.ip.includes(filter) ||
+      d.mac.toLowerCase().includes(filter) ||
+      d.vendor.toLowerCase().includes(filter) ||
+      (d.hostname || '').toLowerCase().includes(filter) ||
+      (d.os || '').toLowerCase().includes(filter) ||
+      (d.type || '').toLowerCase().includes(filter)
+    );
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr id="empty-row"><td colspan="7">No devices found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map((d, i) => `
+      <tr>
+        <td style="color:#475569">${i + 1}</td>
+        <td><span class="badge-ip">${d.ip}</span></td>
+        <td><span class="badge-mac">${d.mac}</span></td>
+        <td>${d.vendor ? `<span class="vendor-tag">${d.vendor}</span>` : '<span style="color:#475569">—</span>'}</td>
+        <td>${typeBadge(d.type)}</td>
+        <td>${osBadge(d.os)}</td>
+        <td>${d.hostname || '<span style="color:#475569">—</span>'}</td>
+      </tr>
+    `).join('');
+  }
+
+  function filterTable() {
+    renderTable(allDevices);
+  }
+
+  function resetCountdown() {
+    countdown = 30;
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      countdown = Math.max(0, countdown - 1);
+      document.getElementById('refresh-in').textContent = countdown;
+      if (countdown === 0) {
+        clearInterval(countdownTimer);
+        fetchStatus();
+      }
+    }, 1000);
+  }
+
+  async function fetchStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+
+      allDevices = data.devices;
+      renderTable(allDevices);
+
+      document.getElementById('device-count').textContent = data.count;
+      document.getElementById('last-scan').textContent = formatTime(data.last_scan);
+
+      const vendors = new Set(data.devices.map(d => d.vendor).filter(Boolean));
+      document.getElementById('vendor-count').textContent = vendors.size;
+
+      const mobileCount = data.devices.filter(d => d.type === 'Mobile').length;
+      document.getElementById('mobile-count').textContent = mobileCount;
+
+      if (data.local_ip) document.getElementById('local-ip').textContent = data.local_ip;
+      if (data.subnet)   document.getElementById('subnet-text').textContent = data.subnet;
+
+      const statusEl = document.getElementById('status-text');
+      const scanBtn  = document.getElementById('scan-btn');
+
+      if (data.scanning) {
+        statusEl.textContent = '⟳ Scanning…';
+        statusEl.className = 'scanning';
+        scanBtn.disabled = true;
+        setTimeout(fetchStatus, 2000);
+      } else {
+        statusEl.className = data.error ? 'error' : '';
+        statusEl.innerHTML = data.error
+          ? '&#9888; ' + data.error
+          : '<span class="dot"></span>Live';
+        scanBtn.disabled = false;
+        resetCountdown();
+      }
+    } catch (e) {
+      document.getElementById('status-text').textContent = 'Connection error';
+      document.getElementById('status-text').className = 'error';
+      setTimeout(fetchStatus, 5000);
+    }
+  }
+
+  async function triggerScan() {
+    document.getElementById('scan-btn').disabled = true;
+    document.getElementById('status-text').textContent = '⟳ Starting scan…';
+    document.getElementById('status-text').className = 'scanning';
+    clearInterval(countdownTimer);
+    document.getElementById('refresh-in').textContent = '…';
+
+    await fetch('/api/scan', { method: 'POST' });
+    setTimeout(fetchStatus, 1000);
+  }
+
+  fetchStatus();
+</script>
+</body>
+</html>
